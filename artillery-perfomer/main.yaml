@@ -1,0 +1,63 @@
+config:
+  ensure:
+    max: 200
+    maxErrorRate: 1
+  environments:
+    develop:
+      target: "http://localhost:1080"
+      expect: {}
+      http:
+        timeout: 5
+        pool: 5
+      phases:
+        - name: "Warm up the application"
+          duration: 10
+          arrivalRate: 1
+          rampTo: 1
+        - name: "Sustained max load"
+          duration: 1
+          arrivalRate: 5
+      processor: "./helpers/my-functions.js"
+    staging:
+      target: "http://localhost:1080"
+      expect: {}
+      phases:
+        - name: "Warm up the application"
+          duration: 120
+          arrivalRate: 1
+          rampTo: 5
+        - name: "Sustained max load"
+          duration: 600
+          arrivalRate: 5
+    production:
+      target: "http://localhost:1080"
+      expect: {}
+      phases:
+        - name: "Warm up the application"
+          duration: 120
+          arrivalRate: 1
+          rampTo: 5
+        - name: "Sustained max load"
+          duration: 600
+          arrivalRate: 5
+  defaults:
+    headers:
+      Content-Type: application/json
+scenarios:
+  - name: "Search and buy"
+    flow:
+      - log: "New virtual user running"
+      - get:
+          url: "/pets"
+          beforeRequest: "setJSONBody"
+          afterRequest: "logHeaders"
+          capture:
+            - json: "$.name"
+              as: name
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - equals:
+                - "Mail"
+                - "{{ name }}"
+      - think: 3

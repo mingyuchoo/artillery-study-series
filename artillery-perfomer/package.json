@@ -1,0 +1,19 @@
+{
+  "name": "artillery-perfomer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.yaml",
+  "scripts": {
+    "start": "npm run start:develop",
+    "start:develop": "DEBUG=http:response artillery run -e develop main.yaml",
+    "start:staging": "DEBUG=http:response artillery run -e staging main.yaml",
+    "start:production": "DEBUG=http:response artillery run -e production main.yaml"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "artillery": "^1.6.0-29",
+    "artillery-plugin-expect": "^1.2.1"
+  }
+}
