@@ -1,0 +1,64 @@
+config:
+  ensure:
+    max: 200
+    maxErrorRate: 1
+  environments:
+    develop:
+      target: 'http://localhost:8080'
+      expect: {}
+      http:
+        timeout: 5
+        pool: 1
+      phases:
+        - name: 'Warm up the application'
+          duration: 1     # ${duration}초 동안
+          arrivalRate: 1  # 가상 사용자 ${arrialRate} 명씩
+          rampTo: 1       # ${rampTo} 명까지 증가시킴
+        - name: 'Sustained max load'
+          duration: 10    # ${duration}초 동안
+          arrivalRate: 1  # ${arrivalRate}명/초 비율로 부하를 생성
+      processor: './helpers/my-functions.js'
+    staging:
+      target: 'http://localhost:8080'
+      expect: {}
+      phases:
+        - name: 'Warm up the application'
+          duration: 120
+          arrivalRate: 1
+          rampTo: 5
+        - name: 'Sustained max load'
+          duration: 600
+          arrivalRate: 5
+  defaults:
+    headers:
+      Content-Type: application/json
+      X-Correlation-Id: 12345
+      X-Session-Id: 'abcdefg'
+      X-Session-Info: '{"memberId": 1}'
+  payload:
+    path: './payloads/date.csv'
+    fields:
+      - 'startDate'
+      - 'endDate'
+scenarios:
+  - name: '1.[login]'
+    flow:
+      - log: 'New VUs ------------------'
+      - get:
+          url: '/login'
+          qs:
+            userName: '{{ startDate }}'
+            searchCodeId:
+          gzip: true
+          beforeRequest: 'setJSONBody'
+          afterResponse: 'logHeaders'
+          capture:
+            - json: '$.successOrNot'
+              as: 'successOrNot'
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - equals:
+                - 'successOrNot'
+                - '{{ successOrNot }}'
+      - think: 3
