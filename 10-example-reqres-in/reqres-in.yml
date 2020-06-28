@@ -1,0 +1,124 @@
+config:
+  ensure:
+    min: 1000
+    median: 5000
+    p95: 9500
+    p99: 9900
+    max: 10000
+    maxErrorRate: 1
+  environments:
+    develop:
+      target: 'https://reqres.in'
+      plugins:
+        expect: {}
+      http:
+        timeout: 5
+        pool: 1
+      phases:
+        - name: 'Functional phase'
+          duration: 1
+          arrivalRate: 1
+          rampTo: 1
+      processor: './helpers/my-functions.js'
+    staging:
+      target: 'https://reqres.in'
+      plugins:
+        expect: {}
+      phases:
+        - name: 'Warm up the application'
+          duration: 120   # ${duration}초 동안
+          arrivalRate: 1  # 가상 사용자 ${arrialRate} 명씩
+          rampTo: 5       # ${rampTo} 명까지 증가시킴
+        - name: 'Sustained max load'
+          duration: 600   # ${duration}초 동안
+          arrivalRate: 5  # ${arrivalRate}명/초 비율로 부하를 생성
+  defaults:
+    headers:
+      Content-Type: application/json
+  payload:
+    path: './payloads/date.csv'
+    fields:
+      - 'startDate'
+      - 'endDate'
+scenarios:
+  - name: 'scenarios - WORKFLOW'
+    flow:
+      # '1.MDOULE > [GET /api/users]'
+      - log: '1.MDOULE > [GET /api/users]'
+      - get:
+          url: '/api/users'
+          qs:
+            page: 2
+          capture:
+            - json: '$.per_page'
+              as: 'per_page'
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - matchesRegexp: .+ # body is not empty
+            - equals:
+                - '{{ per_page }}'
+                - 6
+      - think: 3
+      # '1.MODULE > [POST /api/users]'
+      - log: '1.MODULE > [POST /api/users]'
+      - post:
+          url: '/api/users'
+          json:
+            name: 'Paul'
+            job: 'App Developer'
+          capture:
+            - json: '$.name'
+              as: 'name'
+            - json: '$.id'
+              as: 'created-id'
+          expect:
+            - statusCode: 201
+            - contentType: json
+            - matchesRegexp: .+
+            - equals:
+                - '{{ name }}'
+                - 'Paul'
+      # '1.MODULE > [GET /api/users/2]'
+      - log: '1.MODULE > [GET /api/users/2]'
+      - get:
+          url: '/api/users/2'
+          capture:
+            - json: '$.data.id'
+              as: 'id'
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - matchesRegexp: .+
+            - equals:
+                - '{{ id }}'
+                - '2'
+      # '1.MODULE > [PUT /api/users/12]'
+      - log: '1.MODULE > [PUT /api/users/12]'
+      - put:
+          url: '/api/users/12'
+          json:
+            name: 'John'
+            job: 'Product Owner'
+          capture:
+            - json: '$.name'
+              as: 'name'
+            - json: '$.job'
+              as: 'job'
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - matchesRegexp: .+
+            - equals:
+              - '{{ name }}'
+              - 'John'
+            - equals:
+              - '{{ job }}'
+              - 'Product Owner'
+
+      # '1.MODULE > [DELETE /api/users/12]'
+      - log: '1.MODULE > [DELETE /api/users/12]'
+      - delete:
+          url: '/api/users/12'
+          expect:
+            - statusCode: 204
